@@ -19,35 +19,170 @@ terminal    AUTO, BREAK, CASE, CHAR, CONST, CONTINUE, DEFAULT, DO, DOUBLE, ELSE,
             FLOAT, FOR, GOTO, IF, INT, LONG, REGISTER, RETURN, SHORT, SIGNED, SIZEOF, STATIC,
             STRUCT, SWITCH, TYPEDEF, UNION, UNSIGNED, VOID, VOLATILE, WHILE, INCREMENT, 
             DECREMENT, EQUAL_TO, GRATER_EQUAL, GRATER, TERNARY, LESS_EQUAL, LESS, NOT_EQUAL, OR, 
-            AND, NOT, EQUAL, PLUS, MINUS, MULT, DIV, MODULE, RBO, RBC, SBO, SBC, CBO, CBC, COLON,
-            DOT, PLUS_ASSIGNMENT, MINUS_ASSIGNMENT, MULT_ASSIGNMENT, DIV_ASSIGNMENT, BIT_AND, XOR,
+            AND, NOT, EQUAL, PLUS, MINUS, TIMES, DIV, MODULE, RBO, RBC, SBO, SBC, CBO, CBC, COLON,
+            DOT, PLUS_ASSIGNMENT, MINUS_ASSIGNMENT, TIMES_ASSIGNMENT, DIV_ASSIGNMENT, BIT_AND, XOR,
             BIT_OR, RIGHT_SHIFT, LEFT_SHIFT, COMPLEMENT, MOD_ASSIGNMENT, AND_ASSIGNMENT, XOR_ASSIGNMENT, 
             OR_ASSIGNMENT, LEFT_SHIFT_ASSIGNMENT, RIGHT_SHIFT_ASSIGNMENT, OP, ERROR;
 
 terminal Integer DEC_LIT, Integer OCTAL_LIT, Integer HEX_LIT, double DOUBLE_LIT, String STRING_LIT, char CHAR_LIT;   
 
 /* Non terminals */
-non terminal            program, expr_list;
-non terminal Integer    expr;      // used to store evaluated subexpressions
+non terminal    program;
 
 /* Precedences */
-precedence left 
-precedence left PLUS, MINUS;
-precedence left TIMES;
-precedence left UMINUS;
 
 /* The grammar rules */
 start with program;
 
+program ::= decls function_decls
 
-expr_list ::= expr_list expr:e SEMI         {: System.out.println(e);:}
-            | expr:e SEMI                   {: System.out.println(e);:}
+decls ::= 
+          decl 
+        | decls decl  
 ;
-expr      ::= expr:e1 PLUS  expr:e2         {: RESULT = e1+e2;       :}
-             | expr:e1 MINUS expr:e2        {: RESULT = e1-e2;       :}
-             | expr:e1 TIMES expr:e2        {: RESULT = e1*e2;       :}
-             | MINUS expr:e                 {: RESULT = -e;          :}
-  	     %prec UMINUS
-       | LPAREN expr:e RPAREN	         {: RESULT = e;           :}
-       | NUMBER:n	                     {: RESULT = n;           :}
-             ;
+
+decl  ::= 
+          constant_decls 
+        | global_decls
+;
+
+global_decls  ::=               
+        | global_decls global_decl
+;
+
+constant_decls  ::=               
+        | constant_decls constant_decl 
+;
+
+variable_decls ::= 
+        | variable_decls variable_decl 
+;
+
+function_decls ::=
+          function_decl 
+        | function_decls function_decl
+;
+
+global_decl ::=
+          variable_decl  
+        | variable_decl_assignment 
+;
+
+constant_decl ::=
+        CONST variable_decl_assignment
+;
+
+variable_decl ::=
+          variable SEMICOLON
+;
+
+//int x = 0;  int x = a;
+//En value podría ser también el resultado de una función o una operación
+variable_decl_assignment ::= 
+        variable EQUAL value SEMICOLON
+;
+
+function_decl ::=
+          type IDENTIFIER RBO opt_parameters RBC statement_block
+        | VOID IDENTIFIER RBO opt_parameters RBC statement_block
+;
+
+opt_parameters ::= 
+        | parameters
+;
+
+parameters ::= 
+          variable
+        | parameters COMMA variable
+;
+
+statement_block ::= 
+        CBO statements CBC
+;
+
+statements ::=
+         constant_decls variable_decls statements
+        | statements statement   
+        | statement
+;
+
+statement ::= 
+          statement_block
+        | if_statement 
+        | while_statement
+        | for_statement
+        | switch_statement
+        | break_statement
+        | continue_statement
+        | return_statement
+        | print_statement
+        | expression SEMICOLON
+;
+
+if_statement ::=
+        IF RBO expression RBC statement_block opt_else
+;
+
+opt_else ::= 
+        | ELSE statement_block
+;
+
+while_statement ::= 
+        WHILE RBO expression RBC statement_block
+;
+
+for_statement ::= 
+        FOR RBO for_expression RBC statement_block
+;
+
+for_expression ::= 
+        expression SEMICOLON expression SEMICOLON expression
+;
+
+switch_statement ::= 
+        SWITCH RBO expression RBC switch_cases
+;
+
+switch_cases ::=
+
+;
+
+return_statement ::= 
+          RETURN expression SEMICOLON
+        | RETURN SEMICOLON
+;
+
+break_statement ::=
+        BREAK SEMICOLON
+;
+
+continue_statement ::=
+        CONTINUE SEMICOLON
+;
+
+variable ::=
+        type IDENTIFIER
+;
+
+type ::=
+          INT
+        | CHAR
+        | LONG
+        | SHORT
+;
+
+value ::= 
+          DEC_LIT
+        | OCTAL_LIT
+        | HEX_LIT
+        | DOUBLE_LIT
+        | CHAR_LIT
+        | IDENTIFIER
+;
+
+
+
+
+
+
+

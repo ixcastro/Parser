@@ -332,7 +332,7 @@
 
 \* {
   lexeme = yytext();
-  return MULT;
+  return TIMES;
 }
 
 \/ {
@@ -403,7 +403,7 @@
 
 \*\= {
   lexeme = yytext();
-  return MULT_ASSIGNMENT;
+  return TIMES_ASSIGNMENT;
 }
 
 \/\= {
