@@ -285,7 +285,7 @@ import java_cup.runtime.Symbol
 }
 
 \* {
-  return new Symbol(sym.MULT, yychar, yyline, yytext());
+  return new Symbol(sym.TIMES, yychar, yyline, yytext());
 }
 
 \/ {
@@ -337,7 +337,7 @@ import java_cup.runtime.Symbol
 }
 
 \*\= {
-  return new Symbol(sym.MULT_ASSIGNMENT, yychar, yyline, yytext());
+  return new Symbol(sym.TIMES_ASSIGNMENT, yychar, yyline, yytext());
 }
 
 \/\= {

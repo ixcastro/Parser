@@ -1,5 +1,3 @@
-
-public enum Tokens {
     AUTO, 
     BREAK,
     CASE,
@@ -56,7 +54,7 @@ public enum Tokens {
     EQUAL,
     PLUS,
     MINUS,
-    TIMES,
+    MULT,
     DIV,
     MODULE,
     RBO,
@@ -69,7 +67,7 @@ public enum Tokens {
     DOT,
     PLUS_ASSIGNMENT,
     MINUS_ASSIGNMENT,
-    TIMES_ASSIGNMENT,
+    MULT_ASSIGNMENT,
     DIV_ASSIGNMENT,
     BIT_AND,
     XOR,
@@ -85,4 +83,3 @@ public enum Tokens {
     RIGHT_SHIFT_ASSIGNMENT,
     OP,
     ERROR
-}
