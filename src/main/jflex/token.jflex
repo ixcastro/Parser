@@ -267,7 +267,7 @@
 
 \=\= {
   lexeme = yytext();
-  return EQUAL_TO;
+  return EQUAL_EQUAL;
 }
 
 \>\= {

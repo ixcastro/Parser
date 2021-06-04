@@ -233,7 +233,7 @@ import java_cup.runtime.Symbol
 }
 
 \=\= {
-  return new Symbol(sym.EQUAL_TO, yychar, yyline, yytext());
+  return new Symbol(sym.EQUAL_EQUAL, yychar, yyline, yytext());
 }
 
 \>\= {
@@ -405,3 +405,4 @@ import java_cup.runtime.Symbol
   return null;
 }
 
+A
