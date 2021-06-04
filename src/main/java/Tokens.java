@@ -43,7 +43,7 @@ public enum Tokens {
     SEMICOLON,
     INCREMENT,
     DECREMENT,
-    EQUAL_TO,
+    EQUAL_EQUAL,
     GRATER_EQUAL,
     GRATER,
     TERNARY,

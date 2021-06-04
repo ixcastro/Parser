@@ -2,14 +2,46 @@
 import java_cup.runtime.Symbol;
 
 parser code {:
-    private Symbol symbol;
+    LexScanner lexer; 
+    private Symbol tokenError;
+    private ArrayList<String> errors = new ArrayList<String>();
 
-    public void syntax_error(Symbol symbol){
-        this.symbol = symbol:
+//     public parser(java.io.Reader input){
+//             lexer = new LexScanner(input);
+//     }
+
+    public void syntax_error(Symbol s){
+        try {
+            String lexeme = s.value.toString();
+            int row = s.left + 1;
+            int column = s.right;
+            tokenError = s;
+        } catch(Exception e) {}
     }
 
-    public Symbol getSymbol(){
-        return this.symbol;
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception {
+        try {
+            String lexeme = s.value.toString();
+            int row = s.left + 1;
+            int column = s.right;
+            String str = "Error sintáctico irrecuperable, con el símbolo: " + lexema;
+            this.errors.add(str);
+        } catch (Exception e) {}
+    }
+
+    public void report_error(String message, Object info) {
+        if (info instanceof String){
+            System.out.println(message);
+        } else {
+            if (info instanceof Symbol) {
+                String str = "Error sintático en: " + message;
+                Symbol symbol = (Symbol)info;
+                str += ", con el símbolo: \"" + symbol.value.toString() + "\"";
+                this.errors.add(str);
+            } else {
+                System.err.println(message);
+            }
+        }
     }
 
 :}
@@ -18,7 +50,7 @@ parser code {:
 terminal    AUTO, BREAK, CASE, CHAR, CONST, CONTINUE, DEFAULT, DO, DOUBLE, ELSE, ENUM, EXTERN,
             FLOAT, FOR, GOTO, IF, INT, LONG, REGISTER, RETURN, SHORT, SIGNED, SIZEOF, STATIC,
             STRUCT, SWITCH, TYPEDEF, UNION, UNSIGNED, VOID, VOLATILE, WHILE, INCREMENT, 
-            DECREMENT, EQUAL_TO, GRATER_EQUAL, GRATER, TERNARY, LESS_EQUAL, LESS, NOT_EQUAL, OR, 
+            DECREMENT, EQUAL_EQUAL, GRATER_EQUAL, GRATER, TERNARY, LESS_EQUAL, LESS, NOT_EQUAL, OR, 
             AND, NOT, EQUAL, PLUS, MINUS, TIMES, DIV, MODULE, RBO, RBC, SBO, SBC, CBO, CBC, COLON,
             DOT, PLUS_ASSIGNMENT, MINUS_ASSIGNMENT, TIMES_ASSIGNMENT, DIV_ASSIGNMENT, BIT_AND, XOR,
             BIT_OR, RIGHT_SHIFT, LEFT_SHIFT, COMPLEMENT, MOD_ASSIGNMENT, AND_ASSIGNMENT, XOR_ASSIGNMENT, 
@@ -27,14 +59,23 @@ terminal    AUTO, BREAK, CASE, CHAR, CONST, CONTINUE, DEFAULT, DO, DOUBLE, ELSE,
 terminal Integer DEC_LIT, Integer OCTAL_LIT, Integer HEX_LIT, double DOUBLE_LIT, String STRING_LIT, char CHAR_LIT;   
 
 /* Non terminals */
-non terminal    program;
+non terminal    Symbol program, decls, decl, global_decls, constant_decls, variable_decls, function_decls, global_decl,
+                constant_decl, variable_decl, variable_decl_assignment, function_decl, opt_parameters, parameters, statement_block,
+                statements, statement, if_statement, opt_else, while_statement, for_statement, for_expression, switch_statement,
+                switch_cases, return_statement, break_statement, continue_statement, variable, type, value, epsilon;
 
-/* Precedences */
+/* Precedences */ 
 
 /* The grammar rules */
 start with program;
 
-program ::= decls function_decls
+program ::= 
+          decls function_decls
+        | decls error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay al menos una función", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
 
 decls ::= 
           decl 
@@ -46,15 +87,18 @@ decl  ::=
         | global_decls
 ;
 
-global_decls  ::=               
+global_decls  ::= 
+          epsilon          
         | global_decls global_decl
 ;
 
-constant_decls  ::=               
+constant_decls  ::= 
+          epsilon              
         | constant_decls constant_decl 
 ;
 
 variable_decls ::= 
+          epsilon
         | variable_decls variable_decl 
 ;
 
@@ -69,39 +113,122 @@ global_decl ::=
 ;
 
 constant_decl ::=
-        CONST variable_decl_assignment
+          CONST variable_decl_assignment
+        | CONST error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("CONST sin declaración variable", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
 ;
 
 variable_decl ::=
           variable SEMICOLON
+        | variable error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Variable sin punto y coma al final", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
 ;
 
 //int x = 0;  int x = a;
 //En value podría ser también el resultado de una función o una operación
+
 variable_decl_assignment ::= 
-        variable EQUAL value SEMICOLON
+          variable EQUAL value SEMICOLON
+        | variable error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Sin EQUAL en declaración variable", tokenAct);
+                RESULT = new Symbol(-1);
+        :} value SEMICOLON
 ;
 
 function_decl ::=
           type IDENTIFIER RBO opt_parameters RBC statement_block
         | VOID IDENTIFIER RBO opt_parameters RBC statement_block
+        | type error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Sin identificador de función", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBO opt_parameters RBC statement_block
+        | type IDENTIFIER error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Sin RBO (paréntesis abierto) ", tokenAct);
+                RESULT = new Symbol(-1);
+        :} opt_parameters RBC statement_block
+        | type IDENTIFIER RBO opt_parameters error{:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Sin RBC (paréntesis cerrado) ", tokenAct);
+                RESULT = new Symbol(-1);
+        :} statement_block
+        | type IDENTIFIER RBO opt_parameters RBC error{:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Sin bloque de función ", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
+        | VOID error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Sin identificador de función", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBO opt_parameters RBC statement_block
+        | VOID IDENTIFIER error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Sin RBO (paréntesis abierto) ", tokenAct);
+                RESULT = new Symbol(-1);
+        :} opt_parameters RBC statement_block
+        | VOID IDENTIFIER RBO opt_parameters error{:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Sin RBC (paréntesis cerrado) ", tokenAct);
+                RESULT = new Symbol(-1);
+        :} statement_block
+        | VOID IDENTIFIER RBO opt_parameters RBC error{:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Sin bloque de función ", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
+        |error{:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Función sin tipo", tokenAct);
+                RESULT = new Symbol(-1);
+        :} IDENTIFIER RBO opt_parameters RBC statement_block
 ;
 
 opt_parameters ::= 
+          epsilon
         | parameters
 ;
 
 parameters ::= 
           variable
         | parameters COMMA variable
+        | parameters error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Parámetros sin coma entre ellos", tokenAct);
+                RESULT = new Symbol(-1);
+        :} variable
 ;
 
 statement_block ::= 
-        CBO statements CBC
+          CBO statements CBC
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay bracket al inicio del bloque", tokenAct);
+                RESULT = new Symbol(-1);
+        :} statements CBC 
+        | CBO statements error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay bracket al final del bloque", tokenAct);
+                RESULT = new Symbol(-1);
+        :} 
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay bloque de declaraciones", tokenAct);
+                RESULT = new Symbol(-1);
+        :} 
 ;
 
 statements ::=
-         constant_decls variable_decls statements
+          epsilon
+        | constant_decls variable_decls statements
         | statements statement   
         | statement
 ;
@@ -116,31 +243,159 @@ statement ::=
         | continue_statement
         | return_statement
         | print_statement
-        | expression SEMICOLON
+        | assignment_expression SEMICOLON
+        | do_statement
 ;
 
 if_statement ::=
-        IF RBO expression RBC statement_block opt_else
+          IF RBO expression RBC statement_block opt_else
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene IF", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBO expression RBC statement_block opt_else
+        | IF error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene paréntesis abierto", tokenAct);
+                RESULT = new Symbol(-1);
+        :} expression RBC statement_block opt_else
+        | IF RBO error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("IF sin expresión", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBC statement_block opt_else
+        | IF RBO expression error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene paréntesis cerrado", tokenAct);
+                RESULT = new Symbol(-1);
+        :} statement_block opt_else
+
 ;
 
 opt_else ::= 
+          epsilon
         | ELSE statement_block
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay ELSE", tokenAct);
+                RESULT = new Symbol(-1);
+        :} statement_block
 ;
 
 while_statement ::= 
-        WHILE RBO expression RBC statement_block
+          WHILE RBO expression RBC statement_block
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay WHILE", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBO expression RBC statement_block
+        | WHILE error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay paréntesis al inicio de la expresión", tokenAct);
+                RESULT = new Symbol(-1);
+        :} expression RBC statement_block
+        | WHILE RBO error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay expresión para el while", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBC statement_block
+        | WHILE RBO expression error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay paréntesis al final de la expresión", tokenAct);
+                RESULT = new Symbol(-1);
+        :} statement_block
+        | WHILE RBO expression RBC error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay bloque de declaraciones", tokenAct);
+                RESULT = new Symbol(-1);
+        :} 
 ;
 
 for_statement ::= 
-        FOR RBO for_expression RBC statement_block
+          FOR RBO for_expression RBC statement_block
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay FOR", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBO for_expression RBC statement_block
+        | FOR error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay paréntesis abierto en la expresión", tokenAct);
+                RESULT = new Symbol(-1);
+        :} for_expression RBC statement_block
+        | FOR RBO error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay expresión en el FOR", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBC statement_block
+        | FOR RBO for_expression error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay paréntesis cerrado en la expresión", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBC statement_block
+        | FOR RBO for_expression RBC error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No hay bloque de declaraciones", tokenAct);
+                RESULT = new Symbol(-1);
+        :} 
 ;
 
 for_expression ::= 
-        expression SEMICOLON expression SEMICOLON expression
+          assignment_expression SEMICOLON boolean_expression SEMICOLON arithmetic_expression
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene la primera expresión del FOR", tokenAct);
+                RESULT = new Symbol(-1);
+        :} SEMICOLON boolean_expression SEMICOLON arithmetic_expression 
+        | assignment_expression error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene COMA entre la primera y segunda expresión del FOR", tokenAct);
+                RESULT = new Symbol(-1);
+        :} boolean_expression SEMICOLON arithmetic_expression 
+        | assignment_expression SEMICOLON error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene la segunda expresión del FOR ", tokenAct);
+                RESULT = new Symbol(-1);
+        :} SEMICOLON arithmetic_expression 
+        | assignment_expression SEMICOLON boolean_expression error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene COMA entre la segunda y tercera expresión del FOR", tokenAct);
+                RESULT = new Symbol(-1);
+        :} arithmetic_expression
+        | assignment_expression SEMICOLON boolean_expression SEMICOLON error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene la tercera expresión del FOR", tokenAct);
+                RESULT = new Symbol(-1);
+        :} 
 ;
 
 switch_statement ::= 
-        SWITCH RBO expression RBC switch_cases
+          SWITCH RBO arithmetic_expression RBC switch_cases
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene SWITCH", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBO arithmetic_expression RBC switch_cases
+        | SWITCH error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene paréntesis abierto al inicio de la expresión", tokenAct);
+                RESULT = new Symbol(-1);
+        :} arithmetic_expression RBC switch_cases
+        | SWITCH RBO error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene expresión para el SWITCH", tokenAct);
+                RESULT = new Symbol(-1);
+        :} RBC switch_cases
+        | SWITCH RBO arithmetic_expression error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene paréntesis cerrado al final de la expresión", tokenAct);
+                RESULT = new Symbol(-1);
+        :} switch_cases
+        | SWITCH RBO arithmetic_expression RBC error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene bloque de cases", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
 ;
 
 switch_cases ::=
@@ -150,18 +405,125 @@ switch_cases ::=
 return_statement ::= 
           RETURN expression SEMICOLON
         | RETURN SEMICOLON
+        | RETURN error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene SEMICOLON al final del RETURN", tokenAct);
+                RESULT = new Symbol(-1);
+        :}     
 ;
 
 break_statement ::=
-        BREAK SEMICOLON
+          BREAK SEMICOLON
+        | BREAK error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene SEMICOLON al final del BREAK", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
 ;
 
 continue_statement ::=
-        CONTINUE SEMICOLON
+          CONTINUE SEMICOLON
+        | CONTINUE error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("No tiene SEMICOLON al final del CONTINUE", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
+;
+
+do_statement ::=
+
+;
+
+arithmetic_expression ::=
+          IDENTIFIER INCREMENT
+        | INCREMENT IDENTIFIER
+        | IDENTIFIER DECREMENT
+        | DECREMENT IDENTIFIER
+        | MINUS arithmetic_expression
+        | arithmetic_expression arithmetic_op arithmetic_expression
+        | RBO arithmetic_expression RBC opt_arithmetic_expression
+        | function_call
+        | IDENTIFIER
+        | value
+;
+
+//Puede o no tener expresiones aritméticas después del paréntesis
+opt_arithmetic_expression ::=
+          epsilon
+        | arithmetic_op arithmetic_expression
+;
+
+boolean_expression ::=
+          boolean_value opt_boolean_expression
+        | expression EQUAL_EQUAL expression
+        | expression GRATER_EQUAL expression
+        | expression GRATER expression
+        | expression LESS_EQUAL expression
+        | expression LESS expression
+        | expression NOT_EQUAL expression
+        | expression OR expression
+        | expression AND expression
+        | NOT expression
+        | boolean_value
+;
+
+opt_boolean_expression ::=
+          AND boolean_expression
+        | OR boolean_expression
+        | epsilon
+        | 
+;
+
+assignment_expression ::=
+          IDENTIFIER EQUAL boolean_expression
+        | IDENTIFIER EQUAL arithmetic_expression
+        | IDENTIFIER EQUAL function_call
+;
+
+
+
+arithmetic_op ::=
+          PLUS
+        | MINUS
+        | TIMES
+        | DIV
+        | MODULE
+        | PLUS_ASSIGNMENT
+        | MINUS_ASSIGNMENT
+        | TIMES_ASSIGNMENT
+        | DIV_ASSIGNMENT
+;
+
+
+expression ::=
+          arithmetic_expression
+        | boolean_expression
+        | assignment_expression
+;
+
+function_call ::=
+        IDENTIFIER RBO function_call_parameters RBC 
+;
+
+function_call_parameters ::=
+          epsilon
+        | function_call_parameters arithmetic_expression
+        | function_call_parameters IDENTIFIER
+        | function_call_parameters value 
 ;
 
 variable ::=
-        type IDENTIFIER
+          type IDENTIFIER
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Tipo de variable no existe", tokenAct);
+                RESULT = new Symbol(-1);
+        :} IDENTIFIER
+        | type error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Tipo sin identificador", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
 ;
 
 type ::=
@@ -169,6 +531,11 @@ type ::=
         | CHAR
         | LONG
         | SHORT
+        | error {:
+                Symbol tokenAct = (Symbol)CUP$Syntax$stack.elementAt(CUP$Syntax$top-1);
+                report_error("Tipo declarado no existe", tokenAct);
+                RESULT = new Symbol(-1);
+        :}
 ;
 
 value ::= 
@@ -180,8 +547,19 @@ value ::=
         | IDENTIFIER
 ;
 
+boolean_value ::=
+          TRUE
+        | FALSE
+        | NOT TRUE
+        | NOT FALSE
+        | NOT IDENTIFIER
+;
 
-
+epsilon ::= 
+        {: 
+          RESULT = new Symbol(-1); 
+        :}
+;
 
 
 
