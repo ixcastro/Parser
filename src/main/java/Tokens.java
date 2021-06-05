@@ -38,7 +38,7 @@ public enum Tokens {
     DOUBLE_LIT,
     STRING_LIT,
     CHAR_LIT,
-    _IDENTIFIER,
+    IDENTIFIER,
     COMMA,
     SEMICOLON,
     INCREMENT,
