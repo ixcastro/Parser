@@ -1,23 +1,49 @@
-import java_cup.runtime.Symbol
+package scanner;
+import java_cup.runtime.Symbol;
+import java_cup.runtime.ComplexSymbolFactory;
+import java_cup.runtime.ComplexSymbolFactory.Location;
+import jcup.sym;
 
 %%
 %public
-%class LexScannerCup
-%type java_cup.runtime.Symbol
-%line
-%full
-%char
+%class JFlexScanner
 %cup
+%implements sym
+%char
+%line
 %column
 
-%init{
-  private Symbol symbol(int type, Object value){
-    return new Symbol(type, yyline, yycolumn, value);
+%{
+  StringBuffer string = new StringBuffer();
+  ComplexSymbolFactory symbolFactory;
+  
+  public JFlexScanner(java.io.Reader in, ComplexSymbolFactory sf){
+	    this(in);
+    	symbolFactory = sf;
   }
-  private Symbol symbol(int type){
-    return new Symbol(type, yyline, yycolumn);
+
+  private Symbol symbol(String name, int sym) {
+      int line = yyline;
+      int column = yycolumn;
+      int char_int = (int)yychar;
+      Location left = new Location(line + 1, column + 1, char_int);
+      Location right = new Location(line + 1, column + yylength(), char_int + yylength());
+      return symbolFactory.newSymbol(name, sym, left, right);
   }
-%init}
+
+  private Symbol symbol(String name, int sym, Object val) {
+      int line = yyline;
+      int column = yycolumn;
+      int char_int = (int)yychar;
+      Location left = new Location(line + 1, column + 1, char_int);
+      Location right= new Location(line + 1, column + yylength(), char_int + yylength());
+      return symbolFactory.newSymbol(name, sym, left, right, val);
+  }
+
+  private void error(String message) {
+    System.out.println("Error at line "+(yyline+1)+", column "+(yycolumn+1)+" : "+message);
+  }
+%}
   //********************EXPRESIONES REGULARES********************
 
   //********************LITERALES********************
@@ -36,142 +62,143 @@ import java_cup.runtime.Symbol
   BLANK_SPACE = " "
 
   //********************COMMENTS********************
-  BLOCK_COMMENT = \/\*(.|\n|\r\n)*\*\/ //CORREGIR
+  BLOCK_COMMENT = \/\*[\s\S]*?\*\/
+  //BLOCK_COMMENT = \/\*(^|\n|\r\n)*\*\/ 
   LINE_COMMENT = [//].*
 
   //********************IDENTIFIER********************
-  IDENTIFIER = [A-Za-z]([A-Za-z0-9])*
+  _IDENTIFIER = [A-Za-z]([A-Za-z0-9])*
 
 %%
 
 //****************************************REGLAS***************************************
 //*********************************PALABRAS RESERVADAS*********************************
 "auto" {
-  return new Symbol(sym.AUTO, yychar, yyline, yytext());
+  return symbol("auto", AUTO);
 }
 
 "break" {
-  return new Symbol(sym.BREAK, yychar, yyline, yytext());
+  return symbol("break", BREAK);
 }
 
 "case" {
-  return new Symbol(sym.CASE, yychar, yyline, yytext());
+  return symbol("case", CASE);
 }
 
 "char" {
-  return new Symbol(sym.CHAR, yychar, yyline, yytext());
+  return symbol("char", CHAR);
 }
 
 "const" {
-  return new Symbol(sym.CONST, yychar, yyline, yytext());
+  return symbol("const", CONST);
 }
 
 "continue" {
-  return new Symbol(sym.CONTINUE, yychar, yyline, yytext());
+  return symbol("continue", CONTINUE);
 }
 
 "default" {
-  return new Symbol(sym.DEFAULT, yychar, yyline, yytext());
+  return symbol("default", DEFAULT);
 }
 
 "do" {
-  return new Symbol(sym.DO, yychar, yyline, yytext());
+  return symbol("do", DO);
 }
 
 "double" {
-  return new Symbol(sym.DOUBLE, yychar, yyline, yytext());
+  return symbol("double", DOUBLE);
 }
 
 "else" {
-  return new Symbol(sym.ELSE, yychar, yyline, yytext());
+  return symbol("else", ELSE);
 }
 
 "enum" {
-  return new Symbol(sym.ENUM, yychar, yyline, yytext());
+  return symbol("enum", ENUM);
 }
 
 "extern" {
-  return new Symbol(sym.EXTERN, yychar, yyline, yytext());
+  return symbol("extern", EXTERN);
 }
 
 "float" {
-  return new Symbol(sym.FLOAT, yychar, yyline, yytext());
+  return symbol("float", FLOAT);
 }
 
 "for" {
-  return new Symbol(sym.FOR, yychar, yyline, yytext());
+  return symbol("for", FOR);
 }
 
 "goto" {
-  return new Symbol(sym.GOTO, yychar, yyline, yytext());
+  return symbol("goto", GOTO);
 }
 
 "if" {
-  return new Symbol(sym.IF, yychar, yyline, yytext());
+  return symbol("if", IF);
 }
 
 "int" {
-  return new Symbol(sym.INT, yychar, yyline, yytext());
+  return symbol("int", INT);
 }
 
 "long" {
-  return new Symbol(sym.LONG, yychar, yyline, yytext());
+  return symbol("long", LONG);
 }
 
 "register" {
-  return new Symbol(sym.REGISTER, yychar, yyline, yytext());
+  return symbol("register", REGISTER);
 }
 
 "return" {
-  return new Symbol(sym.RETURN, yychar, yyline, yytext());
+  return symbol("return", RETURN);
 }
 
 "short" {
-  return new Symbol(sym.SHORT, yychar, yyline, yytext());
+  return symbol("short", SHORT);
 }
 
 "signed" {
-  return new Symbol(sym.SIGNED, yychar, yyline, yytext());
+  return symbol("signed", SIGNED);
 }
 
 "sizeof" {
-  return new Symbol(sym.SIZEOF, yychar, yyline, yytext());
+  return symbol("sizeof", SIZEOF);
 }
 
 "static" {
-  return new Symbol(sym.STATIC, yychar, yyline, yytext());
+  return symbol("static", STATIC);
 }
 
 "struct" {
-  return new Symbol(sym.STRUCT, yychar, yyline, yytext());
+  return symbol("struct", STRUCT);
 }
 
 "switch" {
-  return new Symbol(sym.SWITCH, yychar, yyline, yytext());
+  return symbol("switch", SWITCH);
 }
 
 "typedef" {
-  return new Symbol(sym.TYPEDEF, yychar, yyline, yytext());
+  return symbol("typedef", TYPEDEF);
 }
 
 "union" {
-  return new Symbol(sym.UNION, yychar, yyline, yytext());
+  return symbol("union", UNION);
 }
 
 "unsigned" {
-  return new Symbol(sym.UNSIGNED, yychar, yyline, yytext());
+  return symbol("unsigned", UNSIGNED);
 }
 
 "void" {
-  return new Symbol(sym.VOID, yychar, yyline, yytext());
+  return symbol("void", VOID);
 }
 
 "volatile" {
-  return new Symbol(sym.VOLATILE, yychar, yyline, yytext());
+  return symbol("volatile", VOLATILE);
 }
 
 "while" {
-  return new Symbol(sym.WHILE, yychar, yyline, yytext());
+  return symbol("while", WHILE);
 }
 
 //*********************************COMMENTS*********************************
@@ -187,222 +214,220 @@ import java_cup.runtime.Symbol
 
 //*********************************LITERALES*********************************
 {DEC_LITERAL} {
-  return new Symbol(sym.DEC_LIT, yychar, yyline, yytext());
+  return symbol("DEC_LIT", DEC_LIT, Integer.parseInt(yytext()));
 }
 
 {OCTAL_LITERAL} {
-  return new Symbol(sym.OCTAL_LIT, yychar, yyline, yytext());
+  return symbol("OCTAL_LIT", OCTAL_LIT, Integer.parseInt(yytext(), 8));
 }
 
 {HEX_LITERAL} {
-  return new Symbol(sym.HEX_LIT, yychar, yyline, yytext());
+  return symbol("HEX_LIT", HEX_LIT, Integer.parseInt(yytext(), 16));
 }
 
 {DOUBLE_LITERAL} {
-  return new Symbol(sym.DOUBLE_LIT, yychar, yyline, yytext());
+  return symbol("DOUBLE_LIT", DOUBLE_LIT, Double.parseDouble(yytext()));
 }
 
 {STRING_LITERAL} {
-  return new Symbol(sym.STRING_LIT, yychar, yyline, yytext());
+  return symbol("STRING_LIT", STRING_LIT, yytext());
 }
 
 {CHAR_LITERAL} {
-  return new Symbol(sym.CHAR_LIT, yychar, yyline, yytext());
+  return symbol("CHAR_LIT", CHAR_LIT, yytext());
 }
 
 //*********************************IDENTIFICADOR*********************************
-{IDENTIFIER} {
-  return new Symbol(sym._IDENTIFIER, yychar, yyline, yytext());
+{_IDENTIFIER} {
+  return symbol("IDENTIFIER", IDENTIFIER, yytext());
 }
 
 //*********************************OPERADORES*********************************
 \, {
-  return new Symbol(sym.COMMA, yychar, yyline, yytext());
+  return symbol("COMMA", COMMA);
 }
 
 \; {
-  return new Symbol(sym.SEMICOLON, yychar, yyline, yytext());
+  return symbol("SEMICOLON", SEMICOLON);
 }
 
 \+\+ {
-  return new Symbol(sym.INCREMENT, yychar, yyline, yytext());
+  return symbol("INCREMENT", INCREMENT);
 }
 
 \-\- {
-  return new Symbol(sym.DECREMENT, yychar, yyline, yytext());
+  return symbol("DECREMENT", DECREMENT);
 }
 
 \=\= {
-  return new Symbol(sym.EQUAL_EQUAL, yychar, yyline, yytext());
+  return symbol("EQUAL_EQUAL", EQUAL_EQUAL);
 }
 
 \>\= {
-  return new Symbol(sym.GRATER_EQUAL, yychar, yyline, yytext());
+  return symbol("GREATER_EQUAL", GREATER_EQUAL);
 }
 
 \> {
-  return new Symbol(sym.GRATER, yychar, yyline, yytext());
+  return symbol("GREATER", GREATER);
 }
 
 \? {
-  return new Symbol(sym.TERNARY, yychar, yyline, yytext());
+  return symbol("TERNARY", TERNARY);
 }
 
 \<\= {
-  return new Symbol(sym.LESS_EQUAL, yychar, yyline, yytext());
+  return symbol("LESS_EQUAL", LESS_EQUAL);
 }
 
 \< {
-  return new Symbol(sym.LESS, yychar, yyline, yytext());
+  return symbol("LESS", LESS);
 }
 
 \!\= {
-  return new Symbol(sym.NOT_EQUAL, yychar, yyline, yytext());
+  return symbol("NOT_EQUAL", NOT_EQUAL);
 }
 
 \|\| {
-  return new Symbol(sym.OR, yychar, yyline, yytext());
+  return symbol("OR", OR);
 }
 
 \&\& {
-  return new Symbol(sym.AND, yychar, yyline, yytext());
+  return symbol("AND", AND);
 }
 
 \! {
-  return new Symbol(sym.NOT, yychar, yyline, yytext());
+  return symbol("NOT", NOT);
 }
 
 \= {
-  return new Symbol(sym.EQUAL, yychar, yyline, yytext());
+  return symbol("EQUAL", EQUAL);
 }
 
 \+ {
-  return new Symbol(sym.PLUS, yychar, yyline, yytext());
+  return symbol("PLUS", PLUS);
 }
 
 \- {
-  return new Symbol(sym.MINUS, yychar, yyline, yytext());
+  return symbol("MINUS", MINUS);
 }
 
 \* {
-  return new Symbol(sym.TIMES, yychar, yyline, yytext());
+  return symbol("TIMES", TIMES);
 }
 
 \/ {
-  return new Symbol(sym.DIV, yychar, yyline, yytext());
+  return symbol("DIV", DIV);
 }
 
 \% {
-  return new Symbol(sym.MODULE, yychar, yyline, yytext());
+  return symbol("MODULE", MODULE);
 }
 
 \( {
-  return new Symbol(sym.RBO, yychar, yyline, yytext());
+  return symbol("RBO", RBO);
 }
 
 \) {
-  return new Symbol(sym.RBC, yychar, yyline, yytext());
+  return symbol("RBC", RBC);
 }
 
 \[ {
-  return new Symbol(sym.SBO, yychar, yyline, yytext());
+  return symbol("SBO", SBO);
 }
 
 \] {
-  return new Symbol(sym.SBC, yychar, yyline, yytext());
+  return symbol("SBC", SBC);
 }
 
 \{ {
-  return new Symbol(sym.CBO, yychar, yyline, yytext());
+  return symbol("CBO", CBO);
 }
 
 \} {
-  return new Symbol(sym.CBC, yychar, yyline, yytext());
+  return symbol("CBC", CBC);
 }
 
 \: {
-  return new Symbol(sym.COLON, yychar, yyline, yytext());
+  return symbol("COLON", COLON);
 }
 
 \. {
-  return new Symbol(sym.DOT, yychar, yyline, yytext());
+  return symbol("DOT", DOT);
 }
 
 \+\= {
-  return new Symbol(sym.PLUS_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("PLUS_ASSIGNMENT", PLUS_ASSIGNMENT);
 }
 
 \-\= {
-  return new Symbol(sym.MINUS_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("MINUS_ASSIGNMENT", MINUS_ASSIGNMENT);
 }
 
 \*\= {
-  return new Symbol(sym.TIMES_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("TIMES_ASSIGNMENT", TIMES_ASSIGNMENT);
 }
 
 \/\= {
-  return new Symbol(sym.DIV_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("DIV_ASSIGNMENT", DIV_ASSIGNMENT);
 }
 
 \& {
-  return new Symbol(sym.BIT_AND, yychar, yyline, yytext());
+  return symbol("BIT_AND", BIT_AND);
 }
 
 \^ {
-  return new Symbol(sym.XOR, yychar, yyline, yytext());
+  return symbol("XOR", XOR);
 }
 
 \| {
-  return new Symbol(sym.BIT_OR, yychar, yyline, yytext());
+  return symbol("BIT_OR", BIT_OR);
 }
 
 \>\> {
-  return new Symbol(sym.RIGHT_SHIFT, yychar, yyline, yytext());
+  return symbol("RIGHT_SHIFT", RIGHT_SHIFT);
 }
 
 \<\< {
-  return new Symbol(sym.LEFT_SHIFT, yychar, yyline, yytext());
+  return symbol("LEFT_SHIFT", LEFT_SHIFT);
 }
 
 \~ {
-  return new Symbol(sym.COMPLEMENT, yychar, yyline, yytext());
+  return symbol("COMPLEMENT", COMPLEMENT);
 }
 
 \%\= {
-  return new Symbol(sym.MOD_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("MOD_ASSIGNMENT", MOD_ASSIGNMENT);
 }
 
 \&\= {
-  return new Symbol(sym.AND_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("AND_ASSIGNMENT", AND_ASSIGNMENT);
 }
 
 \^\= {
-  return new Symbol(sym.XOR_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("XOR_ASSIGNMENT", XOR_ASSIGNMENT);
 }
 
 \|\= {
-  return new Symbol(sym.OR_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("OR_ASSIGNMENT", OR_ASSIGNMENT);
 }
 
 \<\<\= {
-  return new Symbol(sym.LEFT_SHIFT_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("LEFT_SHIFT_ASSIGNMENT", LEFT_SHIFT_ASSIGNMENT);
 }
 
 \>\>\= {
-  return new Symbol(sym.RIGHT_SHIFT_ASSIGNMENT, yychar, yyline, yytext());
+  return symbol("RIGHT_SHIFT_ASSIGNMENT", RIGHT_SHIFT_ASSIGNMENT);
 }
 
 \-\> {
-  return new Symbol(sym.OP, yychar, yyline, yytext());
+  return symbol("OP", OP);
 }
 
 //Error
 . {
-  return new Symbol(sym.ERROR, yychar, yyline, yytext());
+  return symbol("ERROR", ERROR);
 }
 
 <<EOF>> {
-  return null;
+  return symbol("auto", AUTO);
 }
-
-A
